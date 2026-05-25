@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: s3-file-processor
+  
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        # Acknowledge mode for message processing
+        acknowledge-mode: manual
+        # Number of concurrent consumers
+        concurrency: 5
+        max-concurrency: 10
+        # Prefetch count to control memory usage
+        prefetch: 1
+    template:
+      # Enable publisher confirms
+      mandatory: true
+      
+  # Thread pool configuration for async processing
+  task:
+    execution:
+      pool:
+        core-size: 10
+        max-size: 20
+        queue-capacity: 100
+
+# AWS S3 Configuration
+aws:
+  s3:
+    region: ${AWS_REGION:us-east-1}
+    bucket: ${S3_BUCKET_NAME:my-bucket}
+    # Chunk size for streaming (in bytes) - 10MB chunks
+    chunk-size: ${S3_CHUNK_SIZE:10485760}
+    # Max connections for S3 client
+    max-connections: 50
+  credentials:
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    # Use IAM role if running on EC2/ECS (leave keys empty)
+    use-instance-profile: ${AWS_USE_INSTANCE_PROFILE:false}
+
+# File Processing Configuration
+file:
+  processing:
+    # Maximum file size to process (in bytes) - 5GB
+    max-file-size: ${MAX_FILE_SIZE:5368709120}
+    # Batch size for sending messages to RabbitMQ
+    batch-size: ${BATCH_SIZE:100}
+    # Exchange and routing key for RabbitMQ
+    exchange: ${RABBITMQ_EXCHANGE:file-processing-exchange}
+    routing-key: ${RABBITMQ_ROUTING_KEY:processed-file}
+    queue: ${RABBITMQ_QUEUE:processed-files-queue}
+    # Enable dead letter queue
+    dlq:
+      enabled: true
+      exchange: ${RABBITMQ_DLQ_EXCHANGE:file-processing-dlq-exchange}
+      queue: ${RABBITMQ_DLQ_QUEUE:processed-files-dlq}
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.fileprocessing: DEBUG
+    software.amazon.awssdk: WARN
+    org.springframework.amqp: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/s3-file-processor.log
+    max-size: 10MB
+    max-history: 30
+
+# Made with Bob

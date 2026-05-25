@@ -1,0 +1,27 @@
+@startuml C4_Context_Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title C4 Context Diagram - File Transfer and Processing System
+
+Person(user, "External System/User", "Initiates file transfers via MFT")
+
+System_Boundary(file_processing_system, "File Processing System") {
+    System(mft, "Managed File Transfer (MFT)", "Receives and manages file transfers from external sources")
+    System(s3, "Amazon S3", "Cloud object storage for files")
+    System(lambda, "AWS Lambda", "Serverless compute for file processing")
+    System(rabbitmq, "RabbitMQ", "Message broker for asynchronous processing")
+}
+
+System_Ext(downstream, "Downstream Systems", "Consume processed messages from RabbitMQ")
+
+Rel(user, mft, "Uploads files", "SFTP/FTPS")
+Rel(mft, s3, "Stores files", "S3 API")
+Rel(s3, lambda, "Triggers processing", "S3 Event Notification")
+Rel(lambda, rabbitmq, "Publishes messages", "AMQP")
+Rel(rabbitmq, downstream, "Delivers messages", "AMQP")
+
+SHOW_LEGEND()
+
+@enduml
